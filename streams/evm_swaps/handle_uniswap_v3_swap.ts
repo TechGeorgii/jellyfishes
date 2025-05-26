@@ -1,4 +1,4 @@
-import { DecodedEvmSwap } from './evm_swap_stream';
+import { DecodedEvmSwap } from './swap_types';
 import { events as UniswapV3SwapsEvents } from './uniswap.v3/swaps';
 
 export const handleUniswapV3Swap = (log: any): DecodedEvmSwap | null => {
@@ -15,5 +15,8 @@ export const handleUniswapV3Swap = (log: any): DecodedEvmSwap | null => {
       amount: data.amount1,
       recipient: data.recipient,
     },
+    liquidity: data.liquidity,
+    sqrtPriceX96: data.sqrtPriceX96,
+    tick: data.tick,
   };
 };

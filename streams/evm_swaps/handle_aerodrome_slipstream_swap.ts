@@ -1,8 +1,8 @@
-import { DecodedEvmSwap } from './evm_swap_stream';
-import { events as AerodromeSwapEvents } from './aerodrome/swaps';
+import { events as AerodromeSlipstreamSwapEvents } from './aerodrome.slipstream/swaps';
+import { DecodedEvmSwap } from './swap_types';
 
 export const handleAerodromeSlipstreamSwap = (log: any): DecodedEvmSwap | null => {
-  const data = AerodromeSwapEvents.SlipstreamPoolSwap.decode(log);
+  const data = AerodromeSlipstreamSwapEvents.Swap.decode(log);
 
   return {
     dexName: 'aerodrome',
@@ -15,5 +15,8 @@ export const handleAerodromeSlipstreamSwap = (log: any): DecodedEvmSwap | null =
       amount: data.amount1,
       recipient: data.recipient,
     },
+    liquidity: data.liquidity,
+    sqrtPriceX96: data.sqrtPriceX96,
+    tick: data.tick,
   };
 };

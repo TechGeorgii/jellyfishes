@@ -1,4 +1,4 @@
-import { DecodedEvmSwap } from './evm_swap_stream';
+import { DecodedEvmSwap } from './swap_types';
 import { events as UniswapV2SwapsEvents } from './uniswap.v2/swaps';
 
 export const handleUniswapV2Swap = (log: any): DecodedEvmSwap | null => {

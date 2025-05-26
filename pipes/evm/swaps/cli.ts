@@ -4,13 +4,19 @@ import { EvmSwapStream } from '../../../streams/evm_swaps/evm_swap_stream';
 import { createClickhouseClient, ensureTables, toUnixTime } from '../../clickhouse';
 import { createLogger } from '../../utils';
 import { getConfig } from '../config';
+import { Network } from 'streams/evm_swaps/networks';
 
-const DECIMALS = {
-  'base-mainnet': {
+const DECIMALS: Record<
+  Network,
+  {
+    [address: string]: number;
+  }
+> = {
+  base: {
     ['0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'.toLowerCase()]: 6, // USDC
     ['0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'.toLowerCase()]: 6, // USDT
   },
-  'ethereum-mainnet': {
+  ethereum: {
     ['0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'.toLowerCase()]: 6, // USDC
     ['0xdac17f958d2ee523a2206206994597c13d831ec7'.toLowerCase()]: 6, // USDT
   },
@@ -33,6 +39,7 @@ logger.info(`Local database: ${config.dbPath}`);
 async function main() {
   await ensureTables(clickhouse, __dirname);
 
+  const networkUnderscore = (config.network || '').replace('-', '_');
   const ds = new EvmSwapStream({
     portal: config.portal.url,
     blockRange: {
@@ -51,8 +58,8 @@ async function main() {
     },
     logger,
     state: new ClickhouseState(clickhouse, {
-      table: 'evm_sync_status',
-      id: `evm-swaps-${config.network}${!!process.env.BLOCK_TO ? '-pools' : ''}`,
+      table: `${networkUnderscore}_sync_status`,
+      id: `${networkUnderscore}-swaps${!!process.env.BLOCK_TO ? '-pools' : ''}`,
       onStateRollback: async (state, current) => {
         /**
          * Clean all data before the current offset.
@@ -61,7 +68,7 @@ async function main() {
          */
 
         await state.cleanAllBeforeOffset({
-          table: 'evm_swaps_raw',
+          table: `${networkUnderscore}_swaps_raw`,
           column: 'timestamp',
           offset: current.timestamp,
           filter: `network = '${config.network}'`,
@@ -72,7 +79,7 @@ async function main() {
 
   for await (const swaps of await ds.stream()) {
     await clickhouse.insert({
-      table: 'evm_swaps_raw',
+      table: `${config.network}_swaps_raw`,
       values: swaps.map((s) => {
         return {
           factory_address: s.factory.address,
@@ -85,11 +92,18 @@ async function main() {
           log_index: s.transaction.logIndex,
           account: s.account,
           token_a: s.tokenA.address,
+          token_a_decimals: s.tokenA.decimals,
+          token_a_symbol: s.tokenA.symbol,
           token_b: s.tokenB.address,
+          token_b_decimals: s.tokenB.decimals,
+          token_b_symbol: s.tokenB.symbol,
           amount_a_raw: s.tokenA.amount.toString(),
           amount_b_raw: s.tokenB.amount.toString(),
           amount_a: denominate(config.network, s.tokenA.address || '', s.tokenA.amount).toString(),
           amount_b: denominate(config.network, s.tokenB.address || '', s.tokenB.amount).toString(),
+          pool_liquidity: s.liquidity,
+          pool_sqrt_price_x96: s.sqrtPriceX96,
+          pool_tick: s.tick,
           timestamp: toUnixTime(s.timestamp),
           sign: 1,
         };

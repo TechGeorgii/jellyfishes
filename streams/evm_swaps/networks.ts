@@ -1,26 +1,29 @@
 import {
-  AERODROME_DEPLOYMENTS,
+  AERODROME_BASIC_DEPLOYMENTS,
+  AERODROME_SLIPSTREAM_DEPLOYMENTS,
   UNISWAP_V2_DEPLOYMENTS,
   UNISWAP_V3_DEPLOYMENTS,
 } from './deployments';
-import { DexProtocol } from './evm_swap_stream';
 import { events as UniswapV3FactoryEvents } from './uniswap.v3/factory';
 import { events as UniswapV3SwapEvents } from './uniswap.v3/swaps';
 import { events as UniswapV2FactoryEvents } from './uniswap.v2/factory';
 import { events as UniswapV2SwapEvents } from './uniswap.v2/swaps';
-import { events as AerodromeFactoryEvents } from './aerodrome/factory';
-import { events as AerodromeSwapEvents } from './aerodrome/swaps';
+import { events as AerodromeBasicFactoryEvents } from './aerodrome.basic/factory';
+import { events as AerodromeBasicSwapEvents } from './aerodrome.basic/swaps';
+import { events as AerodromeSlipstreamFactoryEvents } from './aerodrome.slipstream/factory';
+import { events as AerodromeSlipstreamSwapEvents } from './aerodrome.slipstream/swaps';
+import { DexProtocol } from './swap_types';
 
-export type Network = 'base-mainnet' | 'ethereum-mainnet';
+export type Network = 'base' | 'ethereum';
 
 export const NetworksMappings: Record<
   Network,
   Partial<Record<DexProtocol, { pools: any; swaps: any }>>
 > = {
-  'ethereum-mainnet': {
+  ethereum: {
     uniswap_v3: {
       pools: {
-        address: [UNISWAP_V3_DEPLOYMENTS['ethereum-mainnet'].UniswapV3Factory],
+        address: [UNISWAP_V3_DEPLOYMENTS['ethereum']!.Factory],
         topic0: [UniswapV3FactoryEvents.PoolCreated.topic],
         transaction: true,
       },
@@ -32,10 +35,10 @@ export const NetworksMappings: Record<
       ],
     },
   },
-  'base-mainnet': {
+  base: {
     uniswap_v3: {
       pools: {
-        address: [UNISWAP_V3_DEPLOYMENTS['base-mainnet'].UniswapV3Factory],
+        address: [UNISWAP_V3_DEPLOYMENTS['base']!.Factory],
         topic0: [UniswapV3FactoryEvents.PoolCreated.topic],
         transaction: true,
       },
@@ -46,7 +49,7 @@ export const NetworksMappings: Record<
     },
     uniswap_v2: {
       pools: {
-        address: [UNISWAP_V2_DEPLOYMENTS['base-mainnet'].UniswapV2Factory],
+        address: [UNISWAP_V2_DEPLOYMENTS['base']!.Factory],
         topic0: [UniswapV2FactoryEvents.PairCreated.topic],
         transaction: true,
       },
@@ -57,25 +60,30 @@ export const NetworksMappings: Record<
     },
     aerodrome_basic: {
       pools: {
-        address: [AERODROME_DEPLOYMENTS['base-mainnet'].BasicPoolFactory],
-        topic0: [AerodromeFactoryEvents.BasicPoolCreated.topic],
+        address: [AERODROME_BASIC_DEPLOYMENTS['base']!.Factory],
+        topic0: [AerodromeBasicFactoryEvents.PoolCreated.topic],
         transaction: true,
       },
       swaps: {
-        topic0: [AerodromeSwapEvents.BasicPoolSwap.topic],
+        topic0: [AerodromeBasicSwapEvents.Swap.topic],
         transaction: true,
       },
     },
     aerodrome_slipstream: {
       pools: {
-        address: [AERODROME_DEPLOYMENTS['base-mainnet'].SlipstreamPoolFactory],
-        topic0: [AerodromeFactoryEvents.CLFactoryPoolCreated.topic],
+        address: [AERODROME_SLIPSTREAM_DEPLOYMENTS['base']!.Factory],
+        topic0: [AerodromeSlipstreamFactoryEvents.PoolCreated.topic],
         transaction: true,
       },
       swaps: {
-        topic0: [AerodromeSwapEvents.SlipstreamPoolSwap.topic],
+        topic0: [AerodromeSlipstreamSwapEvents.Swap.topic],
         transaction: true,
       },
     },
   },
+};
+
+export const MulticallAddresses: Record<Network, string> = {
+  ethereum: '0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696',
+  base: '0xcA11bde05977b3631167028862bE2a173976CA11',
 };

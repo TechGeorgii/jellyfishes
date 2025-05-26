@@ -5,13 +5,13 @@ dotenv.config();
 
 export const CONTRACTS = {
   factory: {
-    'base-mainnet': {
+    base: {
       address: '0x33128a8fc17869897dce68ed026d694621f6fdfd',
       block: {
         number: 18112225,
       },
     },
-    'ethereum-mainnet': {
+    ethereum: {
       address: '0x1f98431c8ad98523631ae4a59f267346ea31f984',
       block: {
         number: 12369621,
@@ -21,19 +21,19 @@ export const CONTRACTS = {
 };
 
 const PORTAL = {
-  'base-mainnet': {
+  base: {
     url: 'https://portal.sqd.dev/datasets/base-mainnet',
   },
-  'ethereum-mainnet': {
+  ethereum: {
     url: 'https://portal.sqd.dev/datasets/ethereum-mainnet',
   },
 };
 
 export function getConfig() {
   const network =
-    process.env.NETWORK === 'ethereum-mainnet' || process.env.NETWORK === 'base-mainnet'
+    process.env.NETWORK === 'ethereum' || process.env.NETWORK === 'base'
       ? process.env.NETWORK
-      : 'ethereum-mainnet';
+      : 'ethereum';
 
   const blockFrom = process.env.BLOCK_FROM ? parseInt(process.env.BLOCK_FROM) : 0;
 

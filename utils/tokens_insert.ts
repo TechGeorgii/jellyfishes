@@ -3,6 +3,7 @@ import { parse } from 'csv-parse/sync';
 import { ethers } from 'ethers';
 import path from 'path';
 import dotenv from 'dotenv';
+import { Network } from 'streams/evm_swaps/networks';
 dotenv.config();
 
 // ERC20 ABI with only the functions we need
@@ -13,9 +14,9 @@ const ERC20_ABI = [
 ];
 
 // RPC endpoints for different networks
-const RPC_ENDPOINTS: Record<string, string> = {
-  'ethereum-mainnet': process.env.ETHEREUM_RPC_URL!,
-  'base-mainnet': process.env.BASE_RPC_URL!,
+const RPC_ENDPOINTS: Record<Network, string> = {
+  ethereum: process.env.ETHEREUM_RPC_URL!,
+  base: process.env.BASE_RPC_URL!,
 };
 
 async function main() {
