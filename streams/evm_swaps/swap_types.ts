@@ -15,17 +15,17 @@ export type EvmSwap = {
   protocol: DexProtocol;
   block: BlockRef;
   account: string;
+  sender: string;
+  recipient: string;
   tokenA: {
     amount: bigint;
     address: string;
-    sender: string;
     symbol?: string;
     decimals?: number;
   };
   tokenB: {
     amount: bigint;
     address: string;
-    recipient: string;
     symbol?: string;
     decimals?: number;
   };
@@ -37,9 +37,15 @@ export type EvmSwap = {
     index: number;
     logIndex: number;
   };
-  liquidity?: bigint;
-  tick?: number;
-  sqrtPriceX96?: bigint;
+  pool: {
+    address: string;
+    tick_spacing?: number | null;
+    fee?: number | null;
+    stable?: boolean;
+    liquidity?: bigint;
+    sqrtPriceX96?: bigint;
+    tick?: number;
+  };
   timestamp: Date;
 };
 

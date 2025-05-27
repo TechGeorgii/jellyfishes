@@ -19,7 +19,7 @@ import { handleAerodromeSlipstreamSwap } from './handle_aerodrome_slipstream_swa
 import { handleUniswapV2Swap } from './handle_uniswap_v2_swap';
 import { handleUniswapV3Swap } from './handle_uniswap_v3_swap';
 import { symbols } from 'pino';
-import { TokenOnchainHelper } from './token_onchain_helper';
+import { TokenMetadataStorage } from './token_metadata_storage';
 
 type Args = {
   network: Network;
@@ -30,14 +30,18 @@ type Args = {
 
 export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
   poolMetadataStorage: PoolMetadataStorage;
-  tokenOnchainHelper: TokenOnchainHelper;
+  tokenOnchainHelper: TokenMetadataStorage;
 
   initialize() {
     this.poolMetadataStorage = new PoolMetadataStorage(
-      this.options.args?.dbPath,
-      this.options.args?.network,
+      this.options.args.dbPath,
+      this.options.args.network,
     );
-    this.tokenOnchainHelper = new TokenOnchainHelper(this.logger, this.options.args.network);
+    this.tokenOnchainHelper = new TokenMetadataStorage(
+      this.options.args.dbPath,
+      this.logger,
+      this.options.args.network,
+    );
   }
 
   async stream(): Promise<ReadableStream<EvmSwap[]>> {
@@ -136,33 +140,40 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
                   return null;
                 }
 
-                const tokenA_Metadata = this.poolMetadataStorage.getTokenMetadata(
+                const tokenA_Metadata = this.tokenOnchainHelper.getTokenMetadata(
                   poolMetadata.token_a,
                 );
-                const tokenB_Metadata = this.poolMetadataStorage.getTokenMetadata(
-                  poolMetadata.token_a,
+                const tokenB_Metadata = this.tokenOnchainHelper.getTokenMetadata(
+                  poolMetadata.token_b,
                 );
 
                 return {
                   dexName: swap.dexName,
                   protocol: swap.protocol,
                   account: transaction.from,
-                  pool: {
-                    address: log.address,
-                  },
+                  sender: swap.from.sender,
+                  recipient: swap.to.recipient,
                   tokenA: {
                     amount: swap.from.amount,
                     address: poolMetadata.token_a,
-                    sender: swap.from.sender,
                     decimals: tokenA_Metadata?.decimals,
-                    symbols: tokenA_Metadata?.symbol,
+                    symbol: tokenA_Metadata?.symbol,
                   },
                   tokenB: {
                     amount: swap.to.amount,
                     address: poolMetadata.token_b,
-                    recipient: swap.to.recipient,
                     decimals: tokenB_Metadata?.decimals,
-                    symbols: tokenB_Metadata?.symbol,
+                    symbol: tokenB_Metadata?.symbol,
+                  },
+                  pool: {
+                    address: log.address,
+                    tick_spacing: poolMetadata.tick_spacing,
+                    fee: poolMetadata.fee,
+                    stable:
+                      poolMetadata.stable === undefined ? undefined : poolMetadata.stable === 1,
+                    liquidity: swap.liquidity,
+                    sqrtPriceX96: swap.sqrtPriceX96,
+                    tick: swap.tick,
                   },
                   factory: {
                     address: poolMetadata.factory_address,
@@ -174,7 +185,7 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
                     logIndex: log.logIndex,
                   },
                   timestamp: new Date(block.header.timestamp * 1000),
-                };
+                } satisfies EvmSwap;
               });
             })
             .filter(Boolean);

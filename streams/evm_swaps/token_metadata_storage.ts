@@ -1,18 +1,32 @@
 import { Logger } from 'pino';
-import { EvmSwap } from './swap_types';
 import { MulticallAddresses, Network } from './networks';
 import { ethers, JsonRpcProvider } from 'ethers';
 import dotenv from 'dotenv';
+import { DatabaseSync, StatementSync } from 'node:sqlite';
 import * as assert from 'assert';
+
+import { EvmSwap } from './swap_types';
+import { nullToUndefined } from './util';
 
 dotenv.config();
 
 const TOKEN_BATCH_LEN = 100;
 
-export class TokenOnchainHelper {
+export type TokenMetadata = {
+  network: Network;
+  address: string;
+  decimals: number;
+  symbol: string;
+};
+
+export class TokenMetadataStorage {
   provider: JsonRpcProvider;
+  db: DatabaseSync;
+  statements: Record<string, StatementSync>;
+  tokenMetadataMap: Map<string, TokenMetadata>;
 
   constructor(
+    private readonly dbPath: string,
     private readonly logger: Logger,
     private readonly network: Network,
   ) {
@@ -20,6 +34,61 @@ export class TokenOnchainHelper {
     const rpcUrl = process.env[key];
     assert.ok(rpcUrl, `${key} is not specified`);
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
+
+    this.db = new DatabaseSync(this.dbPath);
+    this.db.exec('PRAGMA journal_mode = WAL');
+    this.db.exec(
+      'CREATE TABLE IF NOT EXISTS "evm_tokens" (network TEXT, address TEXT, decimals INTEGER, symbol TEXT, PRIMARY KEY (network, address))',
+    );
+    this.statements = {
+      insert: this.db.prepare(
+        'INSERT OR IGNORE INTO "evm_tokens" VALUES (:network, :address, :decimals, :symbol)',
+      ),
+    };
+    this.tokenMetadataMap = new Map();
+  }
+
+  getTokenMetadata(tokenAddress: string): TokenMetadata | undefined {
+    let tokenMetadata = this.tokenMetadataMap.get(tokenAddress);
+
+    if (!tokenMetadata) {
+      const md = this.getTokenMetadataFromDb([tokenAddress]);
+      tokenMetadata = md[tokenAddress];
+
+      if (tokenMetadata) {
+        this.tokenMetadataMap.set(tokenAddress, tokenMetadata);
+      } else {
+        return undefined;
+      }
+    }
+    return tokenMetadata;
+  }
+
+  saveTokenMetadataIntoDb(tokenMetadata: TokenMetadata[]) {
+    for (const token of tokenMetadata) {
+      this.statements.insert.run(token);
+    }
+  }
+
+  getTokenMetadataFromDb(tokenAddresses: string[]): Record<string, TokenMetadata> {
+    if (!tokenAddresses.length) return {};
+
+    const params = new Array(tokenAddresses.length).fill('?').join(',');
+    const select = this.db.prepare(`
+        SELECT *
+        FROM "evm_tokens"
+        WHERE "network" = ? AND "address" IN (${params})
+    `);
+
+    const tokensMetadata = select.all(this.network, ...tokenAddresses) as TokenMetadata[];
+
+    return tokensMetadata.reduce(
+      (res, token) => ({
+        ...res,
+        [token.address]: nullToUndefined(token),
+      }),
+      {},
+    );
   }
 
   async enrichWithTokenData(events: EvmSwap[]) {
@@ -33,7 +102,6 @@ export class TokenOnchainHelper {
       }
     });
 
-    const tokenMetadata = new Map<string, { decimals: number; symbol: string }>();
     let uniqueTokens = Array.from(tokenAddresses);
 
     try {
@@ -57,6 +125,7 @@ export class TokenOnchainHelper {
         ]);
 
         const results = await this.executeMulticall(calls);
+        const newLoadedTokens: TokenMetadata[] = [];
 
         for (let i = 0; i < currentTokenBatch.length; i++) {
           const tokenAddress = currentTokenBatch[i];
@@ -72,30 +141,37 @@ export class TokenOnchainHelper {
             const symbolResult = results[symbolIndex];
             const symbol = symbolResult ? this.parseStringFromHex(symbolResult) : '';
 
-            tokenMetadata.set(tokenAddress, {
+            const newToken = {
+              address: tokenAddress,
+              network: this.network,
               decimals,
               symbol,
-            });
+            };
+            newLoadedTokens.push(newToken);
+            this.tokenMetadataMap.set(tokenAddress, newToken);
           } catch (decodeError) {
-            tokenMetadata.set(tokenAddress, {
+            this.tokenMetadataMap.set(tokenAddress, {
+              address: tokenAddress,
+              network: this.network,
               decimals: 18,
               symbol: '',
             });
           }
         }
+        this.saveTokenMetadataIntoDb(newLoadedTokens);
       }
 
       // Enrich events with token metadata
       events.forEach((event) => {
         if (event.tokenA.decimals === undefined) {
-          const tokenAData = tokenMetadata.get(event.tokenA.address);
+          const tokenAData = this.tokenMetadataMap.get(event.tokenA.address);
           assert.ok(tokenAData);
           event.tokenA.decimals = tokenAData.decimals;
           event.tokenA.symbol = tokenAData.symbol;
         }
 
         if (event.tokenB.decimals === undefined) {
-          const tokenBData = tokenMetadata.get(event.tokenB.address);
+          const tokenBData = this.tokenMetadataMap.get(event.tokenB.address);
           assert.ok(tokenBData);
           event.tokenB.decimals = tokenBData.decimals;
           event.tokenB.symbol = tokenBData.symbol;

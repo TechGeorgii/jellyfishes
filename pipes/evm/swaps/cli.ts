@@ -6,26 +6,15 @@ import { createLogger } from '../../utils';
 import { getConfig } from '../config';
 import { Network } from 'streams/evm_swaps/networks';
 
-const DECIMALS: Record<
-  Network,
-  {
-    [address: string]: number;
-  }
-> = {
-  base: {
-    ['0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'.toLowerCase()]: 6, // USDC
-    ['0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'.toLowerCase()]: 6, // USDT
-  },
-  ethereum: {
-    ['0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'.toLowerCase()]: 6, // USDC
-    ['0xdac17f958d2ee523a2206206994597c13d831ec7'.toLowerCase()]: 6, // USDT
-  },
-};
-
-function denominate(network: string, address: string, amount: bigint) {
-  const decimals = address ? DECIMALS[network][address] || 18 : 18;
-
-  return Number(amount) / 10 ** decimals;
+function getHumanAmount(token: {
+  amount: bigint;
+  address: string;
+  decimals?: number;
+}) {
+  return (
+    Number(token.amount) /
+    10 ** (token.decimals === undefined ? 18 : token.decimals)
+  ).toString();
 }
 
 const config = getConfig();
@@ -81,7 +70,7 @@ async function main() {
     await clickhouse.insert({
       table: `${config.network}_swaps_raw`,
       values: swaps.map((s) => {
-        return {
+        const obj = {
           factory_address: s.factory.address,
           network: config.network,
           dex_name: s.dexName,
@@ -91,6 +80,8 @@ async function main() {
           transaction_index: s.transaction.index,
           log_index: s.transaction.logIndex,
           account: s.account,
+          sender: s.sender,
+          recipient: s.recipient,
           token_a: s.tokenA.address,
           token_a_decimals: s.tokenA.decimals,
           token_a_symbol: s.tokenA.symbol,
@@ -99,14 +90,20 @@ async function main() {
           token_b_symbol: s.tokenB.symbol,
           amount_a_raw: s.tokenA.amount.toString(),
           amount_b_raw: s.tokenB.amount.toString(),
-          amount_a: denominate(config.network, s.tokenA.address || '', s.tokenA.amount).toString(),
-          amount_b: denominate(config.network, s.tokenB.address || '', s.tokenB.amount).toString(),
-          pool_liquidity: s.liquidity,
-          pool_sqrt_price_x96: s.sqrtPriceX96,
-          pool_tick: s.tick,
+          amount_a: getHumanAmount(s.tokenA),
+          amount_b: getHumanAmount(s.tokenB),
+          pool_address: s.pool.address,
+          pool_tick_spacing: s.pool.tick_spacing,
+          pool_fee_creation: s.pool.fee,
+          pool_stable: s.pool.stable,
+          pool_liquidity: s.pool.liquidity !== undefined ? s.pool.liquidity.toString() : undefined,
+          pool_sqrt_price_x96:
+            s.pool.sqrtPriceX96 !== undefined ? s.pool.sqrtPriceX96.toString() : undefined,
+          pool_tick: s.pool.tick,
           timestamp: toUnixTime(s.timestamp),
           sign: 1,
         };
+        return obj;
       }),
       format: 'JSONEachRow',
     });
