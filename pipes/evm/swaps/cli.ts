@@ -5,17 +5,7 @@ import { createClickhouseClient, ensureTables, toUnixTime } from '../../clickhou
 import { createLogger } from '../../utils';
 import { getConfig } from '../config';
 import { Network } from 'streams/evm_swaps/networks';
-
-function getHumanAmount(token: {
-  amount: bigint;
-  address: string;
-  decimals?: number;
-}) {
-  return (
-    Number(token.amount) /
-    10 ** (token.decimals === undefined ? 18 : token.decimals)
-  ).toString();
-}
+import { PriceExtendStream } from '../../../streams/evm_swaps/price_extend_stream';
 
 const config = getConfig();
 
@@ -66,7 +56,10 @@ async function main() {
     }),
   });
 
-  for await (const swaps of await ds.stream()) {
+  const stream = await ds.stream();
+  for await (const swaps of stream.pipeThrough(
+    await new PriceExtendStream(clickhouse, config.network).pipe(),
+  )) {
     await clickhouse.insert({
       table: `${config.network}_swaps_raw`,
       values: swaps.map((s) => {
@@ -88,10 +81,12 @@ async function main() {
           token_b: s.tokenB.address,
           token_b_decimals: s.tokenB.decimals,
           token_b_symbol: s.tokenB.symbol,
-          amount_a_raw: s.tokenA.amount.toString(),
-          amount_b_raw: s.tokenB.amount.toString(),
-          amount_a: getHumanAmount(s.tokenA),
-          amount_b: getHumanAmount(s.tokenB),
+          price_token_a_usdc: s.price_token_a_usdc,
+          price_token_b_usdc: s.price_token_b_usdc,
+          amount_a_raw: s.tokenA.amount_raw.toString(),
+          amount_b_raw: s.tokenB.amount_raw.toString(),
+          amount_a: s.tokenA.amount_human.toString(),
+          amount_b: s.tokenB.amount_human.toString(),
           pool_address: s.pool.address,
           pool_tick_spacing: s.pool.tick_spacing,
           pool_fee_creation: s.pool.fee,

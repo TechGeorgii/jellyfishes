@@ -18,13 +18,15 @@ export type EvmSwap = {
   sender: string;
   recipient: string;
   tokenA: {
-    amount: bigint;
+    amount_raw: bigint;
+    amount_human: number;
     address: string;
     symbol?: string;
     decimals?: number;
   };
   tokenB: {
-    amount: bigint;
+    amount_raw: bigint;
+    amount_human: number;
     address: string;
     symbol?: string;
     decimals?: number;
@@ -47,6 +49,11 @@ export type EvmSwap = {
     tick?: number;
   };
   timestamp: Date;
+};
+
+export type ExtendedEvmSwap = EvmSwap & {
+  price_token_a_usdc: number;
+  price_token_b_usdc: number;
 };
 
 export type DecodedEvmSwap = {

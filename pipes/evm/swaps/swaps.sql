@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS base_swaps_raw
     amount_b_raw        Int128,
     amount_a            Float64,
     amount_b            Float64,
+    price_token_a_usdc  Float64,
+    price_token_b_usdc  Float64,
     factory_address     LowCardinality(String),
     dex_name            LowCardinality(String),
     protocol            LowCardinality(String),

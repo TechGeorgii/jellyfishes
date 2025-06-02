@@ -28,6 +28,14 @@ type Args = {
   onlyPools?: boolean;
 };
 
+function getHumanAmount(token: {
+  amount_raw: bigint;
+  address: string;
+  decimals?: number;
+}) {
+  return Number(token.amount_raw) / 10 ** (token.decimals === undefined ? 18 : token.decimals);
+}
+
 export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
   poolMetadataStorage: PoolMetadataStorage;
   tokenOnchainHelper: TokenMetadataStorage;
@@ -147,20 +155,22 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
                   poolMetadata.token_b,
                 );
 
-                return {
+                const resSwap = {
                   dexName: swap.dexName,
                   protocol: swap.protocol,
                   account: transaction.from,
                   sender: swap.from.sender,
                   recipient: swap.to.recipient,
                   tokenA: {
-                    amount: swap.from.amount,
+                    amount_raw: swap.from.amount,
+                    amount_human: -1, // compute later
                     address: poolMetadata.token_a,
                     decimals: tokenA_Metadata?.decimals,
                     symbol: tokenA_Metadata?.symbol,
                   },
                   tokenB: {
-                    amount: swap.to.amount,
+                    amount_raw: swap.to.amount,
+                    amount_human: -1, // compute later
                     address: poolMetadata.token_b,
                     decimals: tokenB_Metadata?.decimals,
                     symbol: tokenB_Metadata?.symbol,
@@ -186,6 +196,8 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
                   },
                   timestamp: new Date(block.header.timestamp * 1000),
                 } satisfies EvmSwap;
+
+                return resSwap;
               });
             })
             .filter(Boolean);
@@ -194,6 +206,12 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
 
           await this.tokenOnchainHelper.enrichWithTokenData(events);
 
+          // calc human amounts
+          for (const s of events) {
+            const swap = s as EvmSwap;
+            swap.tokenA.amount_human = getHumanAmount(swap.tokenA);
+            swap.tokenB.amount_human = getHumanAmount(swap.tokenB);
+          }
           controller.enqueue(events);
         },
       }),
