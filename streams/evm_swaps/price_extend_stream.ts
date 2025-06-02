@@ -33,7 +33,7 @@ const referenceTokens: Partial<Record<Network, ReferenceToken[]>> = {
     },
     {
       tokenAddress: '0x4200000000000000000000000000000000000006', // WETH
-      poolAddress: '0xd0b53d9277642d899df5c87a3966a349a798f224'.toLowerCase(),
+      poolAddress: USDC_POOL_ADDRESS.base,
     },
     {
       tokenAddress: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf'.toLowerCase(), // cbBTC
