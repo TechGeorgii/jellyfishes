@@ -32,37 +32,34 @@ def display_candlestick(value):
     # Read the CSV file from the provided path
     try:
         df = pd.read_csv(csv_file_path)
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
         
-        # Check if the required columns exist
-        required_columns = ['timestamp', 'open_price_token_usd', 'high_price_token_usd', 'low_price_token_usd', 'close_price_token_usd']
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        
-        if missing_columns:
-            print(f"Error: CSV file is missing required columns: {', '.join(missing_columns)}")
-            print(f"Available columns: {', '.join(df.columns)}")
-            return go.Figure()
+        # Sort by timestamp and create sequential index for x-axis
+        df = df.sort_values('timestamp')
         
         fig = go.Figure(go.Candlestick(
-            x=df['timestamp'],
+            x=list(range(len(df))),  # Convert range to list
             open=df['open_price_token_usd'],
             high=df['high_price_token_usd'],
             low=df['low_price_token_usd'],
             close=df['close_price_token_usd']
         ))
 
+        # Create custom x-axis ticks with timestamps
         fig.update_layout(
-            xaxis_rangeslider_visible='slider' in value,
             xaxis=dict(
-                #type='category',  # Treat x values as discrete categories
-                categoryorder='array',
-                categoryarray=df['timestamp']  # Preserve the order from your data
+                tickmode='array',
+                ticktext=df['timestamp'].dt.strftime('%H:%M\n%b %d'),
+                tickvals=list(range(len(df))),
+                type='category'  # Use category type to ensure equal spacing
             ),
-            height=600,  # Increase the height of the chart (default is 450)
-            margin=dict(l=50, r=50, t=50, b=50),  # Adjust margins as needed
+            height=600,
+            margin=dict(l=50, r=50, t=50, b=50),
             yaxis=dict(
                 autorange=True,
-                fixedrange=False,  # Allow y-axis zooming
-            )
+                fixedrange=False,
+            ),
+            xaxis_rangeslider_visible='slider' in value
         )
 
         return fig

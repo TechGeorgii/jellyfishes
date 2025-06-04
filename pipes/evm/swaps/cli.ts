@@ -20,7 +20,7 @@ async function main() {
 
   const networkUnderscore = (config.network || '').replace('-', '_');
   const ds = new EvmSwapStream({
-    portal: config.portal.url,
+    portal: process.env.PORTAL_URL ?? config.portal.url,
     blockRange: {
       from: process.env.BLOCK_FROM || 0,
       to: process.env.BLOCK_TO,
@@ -96,6 +96,7 @@ async function main() {
             s.pool.sqrtPriceX96 !== undefined ? s.pool.sqrtPriceX96.toString() : undefined,
           pool_tick: s.pool.tick,
           timestamp: toUnixTime(s.timestamp),
+          a_b_swapped: s.a_b_swapped,
           sign: 1,
         };
         return obj;

@@ -202,7 +202,10 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
             })
             .filter(Boolean);
 
-          if (!events.length) return;
+          if (!events.length) {
+            await this.ack();
+            return;
+          }
 
           await this.tokenOnchainHelper.enrichWithTokenData(events);
 
