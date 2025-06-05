@@ -151,18 +151,34 @@ GROUP BY pool_address, token, timestamp;
 
     To check correctness:
 
-    SELECT
-        sum(ABS(amount_b * price_token_b_usdc) * sign) AS vol,
-        count() AS count,
-        argMin(price_token_a_usdc, tuple(s.timestamp, s.transaction_index, s.log_index)) AS open,
-        max(price_token_a_usdc) AS high,
-        min(price_token_a_usdc) AS low,
-        argMax(price_token_a_usdc, tuple(s.timestamp, s.transaction_index, s.log_index)) AS close
-    FROM base_swaps_raw_pool_gr s
-    WHERE pool_address = '0xd0b53d9277642d899df5c87a3966a349a798f224'
-    AND toStartOfFiveMinute(timestamp) = '2025-04-07 13:30:00'
-    AND ABS(amount_b) <= 10000 AND ABS(amount_b) >= 0.1
+        SELECT
+            sum(ABS(amount_b * price_token_b_usdc) * sign) AS vol,
+            count() AS count,
+            argMin(price_token_a_usdc, tuple(s.timestamp, s.transaction_index, s.log_index)) AS open,
+            max(price_token_a_usdc) AS high,
+            min(price_token_a_usdc) AS low,
+            argMax(price_token_a_usdc, tuple(s.timestamp, s.transaction_index, s.log_index)) AS close
+        FROM base_swaps_raw_pool_gr s
+        WHERE pool_address = '0xd0b53d9277642d899df5c87a3966a349a798f224'
+        AND toStartOfFiveMinute(timestamp) = '2025-04-07 13:30:00'
+        AND ABS(amount_b) <= 10000 AND ABS(amount_b) >= 0.1
 
+    Query data:
+        SELECT
+            --toStartOfInterval(timestamp, INTERVAL 5 minute) AS timestamp,
+            toStartOfInterval(timestamp, INTERVAL 24 HOUR) AS timestamp,
+        --	pool_address,
+            sumMerge(volume_usdc) AS swap_volume_usdc,
+            countMerge(swap_count) AS swap_count,
+            argMinMerge(open_price_token_usdc) AS open,
+            maxMerge(high_price_token_usdc) AS high,
+            minMerge(low_price_token_usdc) AS low,
+            argMaxMerge(close_price_token_usdc) AS close,
+            (close-open) / open AS rise
+        FROM base_vols_candles
+        WHERE pool_address = lower('0xac534fc720fec7cd6b008765cd255074e0742152')
+        GROUP BY pool_address, timestamp
+        ORDER BY pool_address, timestamp
 */
 
 -- ############################################################################################################
