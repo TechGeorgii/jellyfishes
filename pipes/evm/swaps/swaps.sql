@@ -1,3 +1,18 @@
+/*
+    How to resync all views in case something changed but raw data (base_swaps_raw) is correct:
+
+    0. Stop pipe.
+    1. Rename source table:  RENAME TABLE base_swaps_raw TO base_swaps_raw_src
+    2. Delete all views/tables except base_swaps_raw and base_sync_status
+    3. Run this file again – recreate all tables/views.
+    4. Insert raw data into base_swaps_raw again to trigger all incremental MVs:
+        INSERT INTO base_swaps_raw SELECT * FROM base_swaps_raw_src
+    5. Check till this expression is 1 (all rows are processed):
+        SELECT (SELECT COUNT(*) FROM base_swaps_raw) / (SELECT COUNT(*) FROM base_swaps_raw_src)
+    6. Start pipe again.
+*/
+
+
 CREATE TABLE IF NOT EXISTS base_swaps_raw
 (
     timestamp           DateTime CODEC (DoubleDelta, ZSTD),
@@ -94,7 +109,7 @@ ENGINE = AggregatingMergeTree() ORDER BY (pool_address, timestamp);
 CREATE MATERIALIZED VIEW IF NOT EXISTS base_pool_swap_vol_mv TO base_pool_swap_vol
 AS
 SELECT
-    toStartOfDay(s.timestamp) AS timestamp,
+    toStartOfMinute(s.timestamp) AS timestamp,
     pool_address AS pool_address,
     sumState(ABS(amount_b * price_token_b_usdc) * sign) AS swap_volume_usdc
 FROM base_swaps_raw_pool_gr s
@@ -105,7 +120,7 @@ GROUP BY pool_address, timestamp;
     Query as:
 
     SELECT
-        timestamp,
+        toStartOfInterval(timestamp, INTERVAL 24 HOUR) AS timestamp,    -- group by any period that is multiple of one minute
         pool_address,
         sumMerge(swap_volume_usdc) AS swap_volume_usdc
     FROM base_pool_swap_vol
@@ -133,7 +148,7 @@ ENGINE = AggregatingMergeTree() ORDER BY (pool_address, timestamp);
 CREATE MATERIALIZED VIEW IF NOT EXISTS base_vols_candles_mv TO base_vols_candles
 AS
 SELECT
-    toStartOfFiveMinute(s.timestamp) AS timestamp,
+    toStartOfMinute(s.timestamp) AS timestamp,
     pool_address,
     token_a AS token,
     sumState(ABS(amount_b * price_token_b_usdc) * sign) AS volume_usdc,
@@ -163,7 +178,7 @@ GROUP BY pool_address, token, timestamp;
         AND toStartOfFiveMinute(timestamp) = '2025-04-07 13:30:00'
         AND ABS(amount_b) <= 10000 AND ABS(amount_b) >= 0.1
 
-    Query data:
+    Query data (must be 1-minute multiple):
         SELECT
             --toStartOfInterval(timestamp, INTERVAL 5 minute) AS timestamp,
             toStartOfInterval(timestamp, INTERVAL 24 HOUR) AS timestamp,
