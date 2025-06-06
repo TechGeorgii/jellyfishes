@@ -20,15 +20,21 @@ export async function loadSqlFiles(directoryOrFile: string): Promise<string[]> {
   return tables.flatMap((table) => table.split(';').filter((t) => t.trim().length > 0));
 }
 
-export async function ensureTables(clickhouse: ClickHouseClient, dir: string) {
+export async function ensureTables(
+  clickhouse: ClickHouseClient,
+  dir: string,
+  networkReplace: string,
+) {
   const tables = await loadSqlFiles(dir);
 
   for (const table of tables) {
+    let query = '';
     try {
-      await clickhouse.command({ query: table });
+      query = table.replaceAll('${network}', networkReplace);
+      await clickhouse.command({ query });
     } catch (e: any) {
       console.error(`======================`);
-      console.error(table.trim());
+      console.error(query.trim());
       console.error(`======================`);
       console.error(`Failed to create table: ${e.message}`);
       if (!e.message) console.error(e);

@@ -1,14 +1,5 @@
 import { BlockRef } from '../../core/portal_abstract_stream';
-
-export const AllDexProtocols = [
-  'uniswap_v3',
-  'uniswap_v2',
-  'aerodrome_basic',
-  'aerodrome_slipstream',
-] as const;
-
-export type DexProtocol = (typeof AllDexProtocols)[number];
-export type DexName = 'uniswap' | 'aerodrome';
+import { DexName, DexProtocol } from './networks';
 
 export type EvmSwap = {
   dexName: DexName;

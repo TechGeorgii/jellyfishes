@@ -16,9 +16,10 @@ const logger = createLogger('evm dex swaps').child({ network: config.network });
 logger.info(`Local database: ${config.dbPath}`);
 
 async function main() {
-  await ensureTables(clickhouse, __dirname);
-
   const networkUnderscore = (config.network || '').replace('-', '_');
+
+  await ensureTables(clickhouse, __dirname, networkUnderscore);
+
   const ds = new EvmSwapStream({
     portal: process.env.PORTAL_URL ?? config.portal.url,
     blockRange: {
@@ -50,7 +51,6 @@ async function main() {
           table: `${networkUnderscore}_swaps_raw`,
           column: 'timestamp',
           offset: current.timestamp,
-          filter: `network = '${config.network}'`,
         });
       },
     }),

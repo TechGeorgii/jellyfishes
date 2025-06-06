@@ -1,8 +1,8 @@
 import { BlockRef, PortalAbstractStream } from '../../core/portal_abstract_stream';
 
-import { Network, NetworksMappings } from './networks';
+import { DexName, DexProtocol, Network, NetworksMappings } from './networks';
 import { PoolMetadata, PoolMetadataStorage } from './pool_metadata_storage';
-import { AllDexProtocols, DexProtocol, DecodedEvmSwap, EvmSwap } from './swap_types';
+import { DecodedEvmSwap, EvmSwap } from './swap_types';
 
 import { events as UniswapV2FactoryEvents } from './uniswap.v2/factory';
 import { events as UniswapV2SwapsEvents } from './uniswap.v2/swaps';
@@ -24,7 +24,6 @@ import { TokenMetadataStorage } from './token_metadata_storage';
 type Args = {
   network: Network;
   dbPath: string;
-  protocols?: DexProtocol[];
   onlyPools?: boolean;
 };
 
@@ -55,7 +54,8 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
   async stream(): Promise<ReadableStream<EvmSwap[]>> {
     const { args } = this.options;
 
-    const protocols = args?.protocols || AllDexProtocols;
+    // by default, if protocols are not specified, just use all protocols for current network.
+    const dexNames = Object.keys(NetworksMappings[args.network]).map((p) => p as DexName);
 
     const source = await this.getStream({
       type: 'evm',
@@ -79,17 +79,19 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
           transactionIndex: true,
         },
       },
-      logs: protocols.flatMap((protocol) => {
-        const mapping = NetworksMappings[args.network][protocol];
-        if (!mapping) {
-          throw new Error(`Protocol "${protocol}" is not supported in ${args.network} chain`);
+      logs: dexNames.flatMap((dexName) => {
+        const resMappings: any = [];
+        const protocols = NetworksMappings[args.network][dexName];
+
+        for (const protocol in protocols) {
+          const protocolMapping = NetworksMappings[args.network][dexName]![protocol];
+          resMappings.push(protocolMapping.pools);
+          if (!args.onlyPools) {
+            resMappings.push(protocolMapping.swaps);
+          }
         }
 
-        if (args.onlyPools) {
-          return [mapping.pools];
-        }
-
-        return [mapping.pools, mapping.swaps];
+        return resMappings;
       }),
     });
 
