@@ -1,5 +1,3 @@
-import { BlockRef, PortalAbstractStream } from '../../core/portal_abstract_stream';
-
 import { DexName, DexProtocol, Network, NetworksMappings } from './networks';
 import { PoolMetadata, PoolMetadataStorage } from './pool_metadata_storage';
 import { DecodedEvmSwap, EvmSwap } from './swap_types';
@@ -20,6 +18,7 @@ import { handleUniswapV2Swap } from './handle_uniswap_v2_swap';
 import { handleUniswapV3Swap } from './handle_uniswap_v3_swap';
 import { symbols } from 'pino';
 import { TokenMetadataStorage } from './token_metadata_storage';
+import { PortalAbstractStream } from '@sqd-pipes/core';
 
 type Args = {
   network: Network;

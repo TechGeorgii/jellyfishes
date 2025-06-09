@@ -590,17 +590,17 @@
   resolved "https://registry.npmjs.org/@biomejs/cli-darwin-arm64/-/cli-darwin-arm64-1.9.4.tgz"
   integrity sha512-bFBsPWrNvkdKrNCYeAp+xo2HecOGPAy9WyNyB/jKnnedgzl4W4Hb9ZMzYNbf8dMCGmUdSavlYHiR01QaYR58cw==
 
-"@clickhouse/client-common@1.11.0":
-  version "1.11.0"
-  resolved "https://registry.npmjs.org/@clickhouse/client-common/-/client-common-1.11.0.tgz"
-  integrity sha512-O0xbwv7HiMXayokrf5dYIBpjBnYekcOXWz60T1cXLmiZ8vgrfNRCiOpybJkrMXKnw9D0mWCgPUu/rgMY7U1f4g==
+"@clickhouse/client-common@1.11.2":
+  version "1.11.2"
+  resolved "https://registry.npmjs.org/@clickhouse/client-common/-/client-common-1.11.2.tgz"
+  integrity sha512-H4ECHqaipzMgiZKqpb1Z4N3Ofq+lVTCn8I59XsSynqrsfR4jWZD3PipXVvIzMpDmTMvrlJWrOwAdm0DMNiMQbA==
 
-"@clickhouse/client@^1.10.1":
-  version "1.11.0"
-  resolved "https://registry.npmjs.org/@clickhouse/client/-/client-1.11.0.tgz"
-  integrity sha512-VYTQfR0y/BtrIDEjuSce1zv85OvHak5sUhZVyNYJzbAgWHy3jFf8Os7FdUSeqyKav0xGGy+2X+dRanTFjI5Oug==
+"@clickhouse/client@^1.10.1", "@clickhouse/client@^1.11.2":
+  version "1.11.2"
+  resolved "https://registry.npmjs.org/@clickhouse/client/-/client-1.11.2.tgz"
+  integrity sha512-ZE7Q1qxsDNXCkGPf1zqmhpZpwAKxKT+1s4Z432J1Mb2Gm26Y4tG/sJoug81AfAJTt6s7taO2vzNBAKfSR3SStg==
   dependencies:
-    "@clickhouse/client-common" "1.11.0"
+    "@clickhouse/client-common" "1.11.2"
 
 "@coral-xyz/anchor-errors@^0.30.1":
   version "0.30.1"
@@ -1422,6 +1422,16 @@
   integrity sha512-EJjgdFKOw23H6ULPd32wFiFX3O8mPALg6X2d5wSLjxOnJRHnlmVfGLNnTW8bZbLXAsZM8Ja9V+x5B9UQscftjQ==
   dependencies:
     "@noble/hashes" "^1.1.5"
+
+"@sqd-pipes/core@^0.0.1-alpha.1":
+  version "0.0.1-alpha.1"
+  resolved "https://registry.npmjs.org/@sqd-pipes/core/-/core-0.0.1-alpha.1.tgz"
+  integrity sha512-cwY3VN5NxJJLVvivXEYKFhelftdGMVBcNbJ2tl9WvB5mtgZBp6tUnKcM9t8VWNSHjYVtDwZpYszxstcRl/yI6A==
+  dependencies:
+    "@subsquid/http-client" "^1.6.0"
+    "@subsquid/util-internal" "^3.2.0"
+    lodash "^4.17.21"
+    pino "^9.6.0"
 
 "@sqltools/formatter@^1.2.5":
   version "1.2.5"
