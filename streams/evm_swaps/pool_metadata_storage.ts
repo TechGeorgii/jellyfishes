@@ -3,9 +3,7 @@ import { uniq } from 'lodash';
 import { DexName, DexProtocol, Network } from './networks';
 import { nullToUndefined } from './util';
 
-export type PoolMetadata = {
-  network: Network;
-  dex_name: DexName;
+export type PoolMetadataSimple = {
   protocol: DexProtocol;
   pool: string;
   token_a: string;
@@ -16,6 +14,11 @@ export type PoolMetadata = {
   stable?: number;
   block_number: number;
 };
+
+export type PoolMetadata = {
+  network: Network;
+  dex_name: DexName;
+} & PoolMetadataSimple;
 
 export class PoolMetadataStorage {
   db: DatabaseSync;

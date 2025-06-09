@@ -47,6 +47,10 @@ const referenceTokens: Record<Network, ReferenceToken[]> = {
       tokenAddress: '0x940181a94A35A4569E4529A3CDfB74e38FD98631'.toLowerCase(), // AERO
       poolAddress: '0x6cdcb1c4a4d1c3c6d054b27ac5b77e89eafb971d'.toLowerCase(),
     },
+    {
+      tokenAddress: '0x1B8128c3A1B7D20053D10763ff02466ca7FF99FC'.toLowerCase(), // ZORA
+      poolAddress: '0xedc625b74537ee3a10874f53d170e9c17a906b9c'.toLowerCase(),
+    },
   ],
   ethereum: [
     {

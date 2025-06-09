@@ -1,11 +1,25 @@
-import { events as UniswapV3FactoryEvents } from './uniswap.v3/factory';
-import { events as UniswapV3SwapEvents } from './uniswap.v3/swaps';
-import { events as UniswapV2FactoryEvents } from './uniswap.v2/factory';
-import { events as UniswapV2SwapEvents } from './uniswap.v2/swaps';
-import { events as AerodromeBasicFactoryEvents } from './aerodrome.basic/factory';
-import { events as AerodromeBasicSwapEvents } from './aerodrome.basic/swaps';
-import { events as AerodromeSlipstreamFactoryEvents } from './aerodrome.slipstream/factory';
-import { events as AerodromeSlipstreamSwapEvents } from './aerodrome.slipstream/swaps';
+import { events as UniswapV3FactoryEvents } from './protocols/uniswap.v3/factory';
+import { events as UniswapV3SwapEvents } from './protocols/uniswap.v3/swaps';
+import { events as UniswapV2FactoryEvents } from './protocols/uniswap.v2/factory';
+import { events as UniswapV2SwapEvents } from './protocols/uniswap.v2/swaps';
+import { events as AerodromeBasicFactoryEvents } from './protocols/aerodrome.basic/factory';
+import { events as AerodromeBasicSwapEvents } from './protocols/aerodrome.basic/swaps';
+import { events as AerodromeSlipstreamFactoryEvents } from './protocols/aerodrome.slipstream/factory';
+import { events as AerodromeSlipstreamSwapEvents } from './protocols/aerodrome.slipstream/swaps';
+
+import { DecodedEvmSwap } from './swap_types';
+import { EventRecord } from '@subsquid/evm-abi';
+import { handleUniswapV2Swap, handleUniswapV2Pool } from './protocols/uniswap.v2/handle_events';
+import { handleUniswapV3Swap, handleUniswapV3Pool } from './protocols/uniswap.v3/handle_events';
+import {
+  handleAerodromeBasicSwap,
+  handleAerodromeBasicPool,
+} from './protocols/aerodrome.basic/handle_events';
+import {
+  handleAerodromeSlipstreamSwap,
+  handleAerodromeSlipstreamPool,
+} from './protocols/aerodrome.slipstream/handle_events';
+import { PoolMetadataSimple } from './pool_metadata_storage';
 
 export type Network = 'base' | 'ethereum';
 
@@ -17,88 +31,104 @@ export const AllDexProtocols = [
 ] as const;
 
 export type DexProtocol = (typeof AllDexProtocols)[number];
-export type DexName = 'uniswap' | 'aerodrome';
+export type DexName = 'uniswap' | 'aerodrome' | 'sushiswap' | 'baseswap' | 'rocketswap';
+
+type SwapHandler = (log: any) => DecodedEvmSwap | null;
+type SwapEvent = { is: (log: EventRecord) => boolean };
+type PoolHandler = (l: any, block: any) => PoolMetadataSimple | null;
+type ProtocolConfig = {
+  pools: any;
+  swaps: any;
+  swapHandler: SwapHandler;
+  poolCreateHandler: PoolHandler;
+  swapEvent: SwapEvent;
+  factoryAddress: string;
+};
+
+const protocol = (
+  factoryAddress: string,
+  poolCreateEvent: { topic: string },
+  poolCreateHandler: PoolHandler,
+  swapEvent: SwapEvent & { topic: string },
+  swapHandler: SwapHandler,
+): ProtocolConfig => ({
+  pools: {
+    address: [factoryAddress.toLowerCase()],
+    topic0: [poolCreateEvent.topic.toLowerCase()],
+    transaction: true,
+  },
+  swaps: {
+    topic0: [swapEvent.topic],
+    transaction: true,
+  },
+  swapEvent,
+  swapHandler,
+  poolCreateHandler,
+  factoryAddress: factoryAddress.toLowerCase(),
+});
+
+const uniswapV2Protocol = (factoryAddress: string) =>
+  protocol(
+    factoryAddress,
+    UniswapV2FactoryEvents.PairCreated,
+    handleUniswapV2Pool,
+    UniswapV2SwapEvents.Swap,
+    handleUniswapV2Swap,
+  );
+
+const uniswapV3Protocol = (factoryAddress: string) =>
+  protocol(
+    factoryAddress,
+    UniswapV3FactoryEvents.PoolCreated,
+    handleUniswapV3Pool,
+    UniswapV3SwapEvents.Swap,
+    handleUniswapV3Swap,
+  );
 
 export const NetworksMappings: Record<
   Network,
-  Partial<Record<DexName, Partial<Record<DexProtocol, { pools: any; swaps: any }>>>>
+  Partial<Record<DexName, Partial<Record<DexProtocol, ProtocolConfig>>>>
 > = {
   ethereum: {
     uniswap: {
-      uniswap_v2: {
-        pools: {
-          address: ['0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f'.toLowerCase()], // block 10000835
-          topic0: [UniswapV2FactoryEvents.PairCreated.topic],
-          transaction: true,
-        },
-        swaps: {
-          topic0: [UniswapV2SwapEvents.Swap.topic],
-          transaction: true,
-        },
-      },
-      uniswap_v3: {
-        pools: {
-          address: ['0x1f98431c8ad98523631ae4a59f267346ea31f984'.toLowerCase()],
-          topic0: [UniswapV3FactoryEvents.PoolCreated.topic],
-          transaction: true,
-        },
-        swaps: {
-          topic0: [UniswapV3SwapEvents.Swap.topic],
-          transaction: true,
-        },
-      },
+      uniswap_v2: uniswapV2Protocol('0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f'), // block 10000835
+      uniswap_v3: uniswapV3Protocol('0x1f98431c8ad98523631ae4a59f267346ea31f984'),
+    },
+    sushiswap: {
+      uniswap_v2: uniswapV2Protocol('0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac'),
+      uniswap_v3: uniswapV3Protocol('0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F'),
     },
   },
   base: {
     uniswap: {
-      uniswap_v3: {
-        pools: {
-          address: ['0x33128a8fc17869897dce68ed026d694621f6fdfd'.toLowerCase()], // deployed block 1_371_680
-          topic0: [UniswapV3FactoryEvents.PoolCreated.topic],
-          transaction: true,
-        },
-        swaps: {
-          topic0: [UniswapV3SwapEvents.Swap.topic],
-          transaction: true,
-        },
-      },
-      uniswap_v2: {
-        pools: {
-          address: ['0x8909dc15e40173ff4699343b6eb8132c65e18ec6'.toLowerCase()], // deployed block 6_601_915
-          topic0: [UniswapV2FactoryEvents.PairCreated.topic],
-          transaction: true,
-        },
-        swaps: {
-          topic0: [UniswapV2SwapEvents.Swap.topic],
-          transaction: true,
-        },
-      },
+      uniswap_v2: uniswapV2Protocol('0x8909dc15e40173ff4699343b6eb8132c65e18ec6'), // deployed block 6_601_915
+      uniswap_v3: uniswapV3Protocol('0x33128a8fc17869897dce68ed026d694621f6fdfd'), // deployed block 1_371_680
     },
-
+    sushiswap: {
+      uniswap_v2: uniswapV2Protocol('0x71524B4f93c58fcbF659783284E38825f0622859'),
+      uniswap_v3: uniswapV3Protocol('0xc35DADB65012eC5796536bD9864eD8773aBc74C4'),
+    },
+    baseswap: {
+      uniswap_v2: uniswapV2Protocol('0xfda619b6d20975be80a10332cd39b9a4b0faa8bb'),
+    },
+    rocketswap: {
+      uniswap_v2: uniswapV2Protocol('0x1B8128c3A1B7D20053D10763ff02466ca7FF99FC'),
+    },
     aerodrome: {
-      aerodrome_basic: {
-        pools: {
-          address: ['0x420dd381b31aef6683db6b902084cb0ffece40da'.toLowerCase()], // deployed block 3_200_559
-          topic0: [AerodromeBasicFactoryEvents.PoolCreated.topic],
-          transaction: true,
-        },
-        swaps: {
-          topic0: [AerodromeBasicSwapEvents.Swap.topic],
-          transaction: true,
-        },
-      },
-
-      aerodrome_slipstream: {
-        pools: {
-          address: ['0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a'.toLowerCase()], // deployed block 13_843_704
-          topic0: [AerodromeSlipstreamFactoryEvents.PoolCreated.topic],
-          transaction: true,
-        },
-        swaps: {
-          topic0: [AerodromeSlipstreamSwapEvents.Swap.topic],
-          transaction: true,
-        },
-      },
+      aerodrome_basic: protocol(
+        '0x420dd381b31aef6683db6b902084cb0ffece40da'.toLowerCase(), // deployed block 3_200_559
+        AerodromeBasicFactoryEvents.PoolCreated,
+        handleAerodromeBasicPool,
+        AerodromeBasicSwapEvents.Swap,
+        handleAerodromeBasicSwap,
+      ),
+      aerodrome_slipstream: protocol(
+        '0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a'.toLowerCase(), // deployed block 13_843_704
+        AerodromeSlipstreamFactoryEvents.PoolCreated,
+        handleAerodromeSlipstreamPool,
+        AerodromeSlipstreamSwapEvents.Swap,
+        handleAerodromeSlipstreamSwap,
+      ),
     },
   },
 };

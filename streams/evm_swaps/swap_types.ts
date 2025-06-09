@@ -1,4 +1,4 @@
-import { BlockRef } from '../../core/portal_abstract_stream';
+import { BlockRef } from '@sqd-pipes/core';
 import { DexName, DexProtocol } from './networks';
 
 export type EvmSwap = {
@@ -49,8 +49,6 @@ export type ExtendedEvmSwap = EvmSwap & {
 };
 
 export type DecodedEvmSwap = {
-  dexName: DexName;
-  protocol: DexProtocol;
   from: {
     amount: bigint;
     sender: string;

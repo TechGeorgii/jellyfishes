@@ -2,23 +2,11 @@ import { DexName, DexProtocol, Network, NetworksMappings } from './networks';
 import { PoolMetadata, PoolMetadataStorage } from './pool_metadata_storage';
 import { DecodedEvmSwap, EvmSwap } from './swap_types';
 
-import { events as UniswapV2FactoryEvents } from './uniswap.v2/factory';
-import { events as UniswapV2SwapsEvents } from './uniswap.v2/swaps';
-import { events as UniswapV3FactoryEvents } from './uniswap.v3/factory';
-import { events as UniswapV3SwapsEvents } from './uniswap.v3/swaps';
-import { events as AerodromeBasicFactoryEvents } from './aerodrome.basic/factory';
-import { events as AerodromeBasicSwapEvents } from './aerodrome.basic/swaps';
-import { events as AerodromeSlipstreamFactoryEvents } from './aerodrome.slipstream/factory';
-import { events as AerodromeSlipstreamSwapEvents } from './aerodrome.slipstream/swaps';
-
 import { nonNullable } from './util';
-import { handleAerodromeBasicSwap } from './handle_aerodrome_basic_swap';
-import { handleAerodromeSlipstreamSwap } from './handle_aerodrome_slipstream_swap';
-import { handleUniswapV2Swap } from './handle_uniswap_v2_swap';
-import { handleUniswapV3Swap } from './handle_uniswap_v3_swap';
-import { symbols } from 'pino';
 import { TokenMetadataStorage } from './token_metadata_storage';
 import { PortalAbstractStream } from '@sqd-pipes/core';
+import { EventRecord } from '@subsquid/evm-abi';
+import { findPoolMetadata, findSwap } from './protocol_mappings';
 
 type Args = {
   network: Network;
@@ -53,7 +41,7 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
   async stream(): Promise<ReadableStream<EvmSwap[]>> {
     const { args } = this.options;
 
-    // by default, if protocols are not specified, just use all protocols for current network.
+    // by default, request information about all dexes
     const dexNames = Object.keys(NetworksMappings[args.network]).map((p) => p as DexName);
 
     const source = await this.getStream({
@@ -125,26 +113,7 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
                   return null;
                 }
 
-                let swap: DecodedEvmSwap | null = null;
-                if (UniswapV2SwapsEvents.Swap.is(log) && poolMetadata.protocol === 'uniswap_v2') {
-                  swap = handleUniswapV2Swap(log);
-                } else if (
-                  UniswapV3SwapsEvents.Swap.is(log) &&
-                  poolMetadata.protocol === 'uniswap_v3'
-                ) {
-                  swap = handleUniswapV3Swap(log);
-                } else if (
-                  AerodromeBasicSwapEvents.Swap.is(log) &&
-                  poolMetadata.protocol === 'aerodrome_basic'
-                ) {
-                  swap = handleAerodromeBasicSwap(log);
-                } else if (
-                  AerodromeSlipstreamSwapEvents.Swap.is(log) &&
-                  poolMetadata.protocol === 'aerodrome_slipstream'
-                ) {
-                  swap = handleAerodromeSlipstreamSwap(log);
-                }
-
+                const swap = findSwap(log, poolMetadata);
                 if (!swap) {
                   return null;
                 }
@@ -157,8 +126,8 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
                 );
 
                 const resSwap = {
-                  dexName: swap.dexName,
-                  protocol: swap.protocol,
+                  dexName: poolMetadata.dex_name,
+                  protocol: poolMetadata.protocol,
                   account: transaction.from,
                   sender: swap.from.sender,
                   recipient: swap.to.recipient,
@@ -229,63 +198,7 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
       .flatMap((block: any) => {
         if (!block.logs) return [];
 
-        return block.logs.map((l) => {
-          let md: PoolMetadata | null = null;
-          if (UniswapV2FactoryEvents.PairCreated.is(l)) {
-            const data = UniswapV2FactoryEvents.PairCreated.decode(l);
-            md = {
-              network: args.network,
-              pool: data.pair,
-              token_a: data.token0,
-              token_b: data.token1,
-              factory_address: l.address,
-              dex_name: 'uniswap',
-              protocol: 'uniswap_v2',
-              block_number: block.header.number,
-            };
-          } else if (UniswapV3FactoryEvents.PoolCreated.is(l)) {
-            const data = UniswapV3FactoryEvents.PoolCreated.decode(l);
-            md = {
-              network: args.network,
-              pool: data.pool,
-              token_a: data.token0,
-              token_b: data.token1,
-              factory_address: l.address,
-              dex_name: 'uniswap',
-              protocol: 'uniswap_v3',
-              fee: data.fee,
-              tick_spacing: data.tickSpacing,
-              block_number: block.header.number,
-            };
-          } else if (AerodromeBasicFactoryEvents.PoolCreated.is(l)) {
-            const data = AerodromeBasicFactoryEvents.PoolCreated.decode(l);
-            md = {
-              network: args.network,
-              pool: data.pool,
-              token_a: data.token0,
-              token_b: data.token1,
-              factory_address: l.address,
-              dex_name: 'aerodrome',
-              protocol: 'aerodrome_basic',
-              stable: data.stable ? 1 : 0,
-              block_number: block.header.number,
-            };
-          } else if (AerodromeSlipstreamFactoryEvents.PoolCreated.is(l)) {
-            const data = AerodromeSlipstreamFactoryEvents.PoolCreated.decode(l);
-            md = {
-              network: args.network,
-              pool: data.pool,
-              token_a: data.token0,
-              token_b: data.token1,
-              factory_address: l.address,
-              dex_name: 'aerodrome',
-              protocol: 'aerodrome_slipstream',
-              tick_spacing: data.tickSpacing,
-              block_number: block.header.number,
-            };
-          }
-          return md;
-        });
+        return block.logs.map((l) => findPoolMetadata(l, block, args.network));
       })
       .filter(nonNullable);
     if (pools.length) {
