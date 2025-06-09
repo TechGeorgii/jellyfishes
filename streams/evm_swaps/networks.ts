@@ -116,14 +116,14 @@ export const NetworksMappings: Record<
     },
     aerodrome: {
       aerodrome_basic: protocol(
-        '0x420dd381b31aef6683db6b902084cb0ffece40da'.toLowerCase(), // deployed block 3_200_559
+        '0x420dd381b31aef6683db6b902084cb0ffece40da', // deployed block 3_200_559
         AerodromeBasicFactoryEvents.PoolCreated,
         handleAerodromeBasicPool,
         AerodromeBasicSwapEvents.Swap,
         handleAerodromeBasicSwap,
       ),
       aerodrome_slipstream: protocol(
-        '0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a'.toLowerCase(), // deployed block 13_843_704
+        '0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a', // deployed block 13_843_704
         AerodromeSlipstreamFactoryEvents.PoolCreated,
         handleAerodromeSlipstreamPool,
         AerodromeSlipstreamSwapEvents.Swap,
