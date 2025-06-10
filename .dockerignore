@@ -3,3 +3,5 @@ api
 app
 metadata
 *.db
+*.env
+.env
