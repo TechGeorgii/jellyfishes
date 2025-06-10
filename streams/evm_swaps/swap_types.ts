@@ -7,7 +7,7 @@ export type EvmSwap = {
   block: BlockRef;
   account: string;
   sender: string;
-  recipient: string;
+  recipient?: string;
   tokenA: {
     amount_raw: bigint;
     amount_human: number;
@@ -55,9 +55,10 @@ export type DecodedEvmSwap = {
   };
   to: {
     amount: bigint;
-    recipient: string;
+    recipient?: string;
   };
   liquidity?: bigint;
   tick?: number;
   sqrtPriceX96?: bigint;
+  id?: string; // For Uniswap V4 swaps, id of pool
 };

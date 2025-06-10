@@ -11,6 +11,7 @@ import { nullToUndefined } from './util';
 dotenv.config();
 
 const TOKEN_BATCH_LEN = 100;
+export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 export type TokenMetadata = {
   network: Network;
@@ -46,6 +47,13 @@ export class TokenMetadataStorage {
       ),
     };
     this.tokenMetadataMap = new Map();
+    // predefined ETH token (used in Uniswap V4)
+    this.tokenMetadataMap.set(ZERO_ADDRESS, {
+      address: ZERO_ADDRESS,
+      decimals: 18,
+      network,
+      symbol: 'ETH',
+    });
   }
 
   getTokenMetadata(tokenAddress: string): TokenMetadata | undefined {

@@ -21,7 +21,7 @@ export const handleUniswapV3Swap = (log: any): DecodedEvmSwap | null => {
   };
 };
 
-export const handleUniswapV3Pool = (l: any, block: any): PoolMetadataSimple | null => {
+export const handleUniswapV3Pool = (l: any): PoolMetadataSimple | null => {
   if (UniswapV3FactoryEvents.PoolCreated.is(l)) {
     const data = UniswapV3FactoryEvents.PoolCreated.decode(l);
     return {
@@ -32,7 +32,6 @@ export const handleUniswapV3Pool = (l: any, block: any): PoolMetadataSimple | nu
       protocol: 'uniswap_v3',
       fee: data.fee,
       tick_spacing: data.tickSpacing,
-      block_number: block.header.number,
     };
   }
 

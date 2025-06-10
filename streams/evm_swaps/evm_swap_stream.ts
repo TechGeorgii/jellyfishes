@@ -108,14 +108,39 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
                   return null;
                 }
 
-                const poolMetadata = this.poolMetadataStorage.getPoolMetadata(log.address);
-                if (!poolMetadata) {
-                  return null;
-                }
+                // FIXME: bad design, improve if/when another DEX with Uniswap V4 protocol is added.
+                const uniswapV4Swap =
+                  NetworksMappings[args.network].uniswap?.uniswap_v4?.factoryAddress ===
+                  log.address;
 
-                const swap = findSwap(log, poolMetadata);
-                if (!swap) {
-                  return null;
+                let poolMetadata: PoolMetadata | undefined;
+                let swap: DecodedEvmSwap | null;
+                let poolAddress: string;
+
+                if (uniswapV4Swap) {
+                  swap = findSwap(log, {
+                    network: args.network,
+                    dex_name: 'uniswap',
+                    protocol: 'uniswap_v4',
+                  });
+                  if (!swap?.id) {
+                    return null;
+                  }
+                  poolMetadata = this.poolMetadataStorage.getPoolMetadata(swap.id);
+                  if (!poolMetadata) {
+                    return null;
+                  }
+                  poolAddress = swap.id;
+                } else {
+                  poolMetadata = this.poolMetadataStorage.getPoolMetadata(log.address);
+                  if (!poolMetadata) {
+                    return null;
+                  }
+                  swap = findSwap(log, poolMetadata);
+                  if (!swap) {
+                    return null;
+                  }
+                  poolAddress = log.address;
                 }
 
                 const tokenA_Metadata = this.tokenOnchainHelper.getTokenMetadata(
@@ -146,7 +171,7 @@ export class EvmSwapStream extends PortalAbstractStream<EvmSwap, Args> {
                     symbol: tokenB_Metadata?.symbol,
                   },
                   pool: {
-                    address: log.address,
+                    address: poolAddress,
                     tick_spacing: poolMetadata.tick_spacing,
                     fee: poolMetadata.fee,
                     stable:

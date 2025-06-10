@@ -18,7 +18,7 @@ export const handleUniswapV2Swap = (log: any): DecodedEvmSwap | null => {
   };
 };
 
-export const handleUniswapV2Pool = (l: any, block: any): PoolMetadataSimple | null => {
+export const handleUniswapV2Pool = (l: any): PoolMetadataSimple | null => {
   if (UniswapV2FactoryEvents.PairCreated.is(l)) {
     const data = UniswapV2FactoryEvents.PairCreated.decode(l);
     return {
@@ -27,7 +27,6 @@ export const handleUniswapV2Pool = (l: any, block: any): PoolMetadataSimple | nu
       token_b: data.token1,
       factory_address: l.address,
       protocol: 'uniswap_v2',
-      block_number: block.header.number,
     };
   }
 

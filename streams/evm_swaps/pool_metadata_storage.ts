@@ -12,11 +12,14 @@ export type PoolMetadataSimple = {
   tick_spacing?: number;
   fee?: number;
   stable?: number;
-  block_number: number;
 };
 
 export type PoolMetadata = {
   network: Network;
+  block_number: number;
+  transaction_index: number;
+  log_index: number;
+  transaction_hash: string;
   dex_name: DexName;
 } & PoolMetadataSimple;
 
@@ -32,11 +35,11 @@ export class PoolMetadataStorage {
     this.db = new DatabaseSync(this.dbPath);
     this.db.exec('PRAGMA journal_mode = WAL');
     this.db.exec(
-      'CREATE TABLE IF NOT EXISTS "evm_pools" (network TEXT, dex_name TEXT, protocol TEXT, pool TEXT, token_a TEXT, token_b TEXT, factory_address TEXT, block_number INTEGER, tick_spacing INTEGER, fee INTEGER, stable INTEGER, PRIMARY KEY (network, pool))',
+      'CREATE TABLE IF NOT EXISTS "evm_pools" (network TEXT, dex_name TEXT, protocol TEXT, pool TEXT, token_a TEXT, token_b TEXT, factory_address TEXT, tick_spacing INTEGER, fee INTEGER, stable INTEGER, block_number INTEGER, transaction_index INTEGER, log_index INTEGER, transaction_hash TEXT, PRIMARY KEY (network, pool))',
     );
     this.statements = {
       insert: this.db.prepare(
-        'INSERT OR IGNORE INTO "evm_pools" VALUES (:network, :dex_name, :protocol, :pool, :token_a, :token_b, :factory_address, :block_number, :tick_spacing, :fee, :stable)',
+        'INSERT OR IGNORE INTO "evm_pools" VALUES (:network, :dex_name, :protocol, :pool, :token_a, :token_b, :factory_address, :tick_spacing, :fee, :stable, :block_number, :transaction_index, :log_index, :transaction_hash)',
       ),
     };
     this.poolMetadataMap = new Map();

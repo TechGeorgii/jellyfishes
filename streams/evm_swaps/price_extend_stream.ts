@@ -2,6 +2,7 @@ import assert from 'assert';
 import { ClickHouseClient } from '@clickhouse/client';
 import { EvmSwap, ExtendedEvmSwap } from './swap_types';
 import { Network } from './networks';
+import { ZERO_ADDRESS } from './token_metadata_storage';
 
 type ReferenceToken = {
   tokenAddress: string;
@@ -32,6 +33,11 @@ const referenceTokens: Record<Network, ReferenceToken[]> = {
       poolAddress: USDC_POOL_ADDRESS.base,
     },
     {
+      tokenAddress: ZERO_ADDRESS, // ETH
+      poolAddress:
+        '0x96d4b53a38337a5733179751781178a2613306063c511b78cd02684739288c0a'.toLowerCase(), // ETH-USDC Uniswap V4
+    },
+    {
       tokenAddress: '0x4200000000000000000000000000000000000006', // WETH
       poolAddress: USDC_POOL_ADDRESS.base,
     },
@@ -58,7 +64,11 @@ const referenceTokens: Record<Network, ReferenceToken[]> = {
       poolAddress: USDC_POOL_ADDRESS.ethereum,
     },
     {
-      tokenAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // WETH
+      tokenAddress: ZERO_ADDRESS, // ETH - native token
+      poolAddress: '0x21c67e77068de97969ba93d4aab21826d33ca12bb9f565d8496e8fda8a82ca27', // ETH-USDC Uniswap V4 pool
+    },
+    {
+      tokenAddress: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'.toLowerCase(), // WETH
       poolAddress: USDC_POOL_ADDRESS.base,
     },
   ],

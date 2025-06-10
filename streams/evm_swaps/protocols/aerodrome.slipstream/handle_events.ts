@@ -21,7 +21,7 @@ export const handleAerodromeSlipstreamSwap = (log: any): DecodedEvmSwap | null =
   };
 };
 
-export const handleAerodromeSlipstreamPool = (l: any, block: any): PoolMetadataSimple | null => {
+export const handleAerodromeSlipstreamPool = (l: any): PoolMetadataSimple | null => {
   if (AerodromeSlipstreamFactoryEvents.PoolCreated.is(l)) {
     const data = AerodromeSlipstreamFactoryEvents.PoolCreated.decode(l);
     return {
@@ -31,7 +31,6 @@ export const handleAerodromeSlipstreamPool = (l: any, block: any): PoolMetadataS
       factory_address: l.address,
       protocol: 'aerodrome_slipstream',
       tick_spacing: data.tickSpacing,
-      block_number: block.header.number,
     };
   }
   return null;

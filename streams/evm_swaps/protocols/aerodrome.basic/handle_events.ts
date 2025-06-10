@@ -20,7 +20,7 @@ export const handleAerodromeBasicSwap = (log: any): DecodedEvmSwap | null => {
   };
 };
 
-export const handleAerodromeBasicPool = (l: any, block: any): PoolMetadataSimple | null => {
+export const handleAerodromeBasicPool = (l: any): PoolMetadataSimple | null => {
   if (AerodromeBasicFactoryEvents.PoolCreated.is(l)) {
     const data = AerodromeBasicFactoryEvents.PoolCreated.decode(l);
     return {
@@ -30,7 +30,6 @@ export const handleAerodromeBasicPool = (l: any, block: any): PoolMetadataSimple
       factory_address: l.address,
       protocol: 'aerodrome_basic',
       stable: data.stable ? 1 : 0,
-      block_number: block.header.number,
     };
   }
   return null;
